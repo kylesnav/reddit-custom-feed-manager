@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 16 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 100% 45%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 4.8% 95.9%;
+    --muted-foreground: 215.4 4.4% 46.9%;
+    --accent: 210 100% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214.3 7.4% 91.8%;
+    --input: 214.3 7.4% 91.8%;
+    --ring: 16 100% 50%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 9.3% 10.2%;
+    --foreground: 0 0% 98%;
+    --card: 222.2 9.3% 10.2%;
+    --card-foreground: 0 0% 98%;
+    --popover: 222.2 9.3% 10.2%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 16 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 100% 45%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 217.2 10.6% 14.9%;
+    --muted-foreground: 215 8.7% 64.9%;
+    --accent: 210 100% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217.2 10.6% 14.9%;
+    --input: 217.2 10.6% 14.9%;
+    --ring: 16 100% 50%;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-white text-gray-900 dark:bg-reddit-gray-900 dark:text-gray-100;
+  }
+}
+
+@layer components {
+  .btn-reddit {
+    @apply bg-reddit-orange hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200;
+  }
+  
+  .card-reddit {
+    @apply bg-white dark:bg-reddit-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200;
+  }
+  
+  .input-reddit {
+    @apply w-full px-3 py-2 border border-reddit-gray-300 dark:border-reddit-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-reddit-orange bg-white dark:bg-reddit-gray-800 text-gray-900 dark:text-gray-100;
+  }
+}
