@@ -6,14 +6,11 @@ import {
   RedditListing,
   RateLimitInfo,
 } from '@/types/reddit';
-import { RedditAuth } from '@/lib/auth/reddit-auth';
 
-const REDDIT_API_BASE = 'https://oauth.reddit.com';
 const RATE_LIMIT_PER_MINUTE = 60;
 
 export class RedditAPI {
   private static instance: RedditAPI;
-  private auth: RedditAuth;
   private rateLimitInfo: RateLimitInfo = {
     remaining: RATE_LIMIT_PER_MINUTE,
     reset: Date.now() + 60000,
@@ -22,9 +19,7 @@ export class RedditAPI {
   private requestQueue: Array<() => Promise<any>> = [];
   private isProcessingQueue = false;
 
-  private constructor() {
-    this.auth = RedditAuth.getInstance();
-  }
+  private constructor() {}
 
   public static getInstance(): RedditAPI {
     if (!RedditAPI.instance) {
@@ -41,93 +36,58 @@ export class RedditAPI {
       const executeRequest = async () => {
         try {
           await this.checkRateLimit();
-          
-          // Check if we're in the browser and need to use proxy
-          if (typeof window !== 'undefined') {
-            // Use our proxy API routes for browser requests
-            let proxyUrl = '';
-            
-            // Map Reddit endpoints to our proxy routes
-            if (endpoint.includes('/subreddits/mine/subscriber')) {
-              const params = endpoint.split('?')[1] || '';
-              proxyUrl = `/api/reddit/subreddits${params ? '?' + params : ''}`;
-            } else if (endpoint === '/api/multi/mine') {
-              proxyUrl = '/api/reddit/feeds';
-            } else if (endpoint === '/api/multi') {
-              proxyUrl = '/api/reddit/feeds';
-            } else if (endpoint === '/api/v1/me') {
-              proxyUrl = '/api/reddit/me';
-            } else if (endpoint.startsWith('/api/multi/')) {
-              // For feed operations like update, delete, add/remove subreddits
-              // We'll create a generic feed operations proxy
-              proxyUrl = `/api/reddit/feed-ops`;
-              // Add the actual Reddit endpoint as a header
-              options.headers = {
-                ...options.headers,
-                'X-Reddit-Endpoint': endpoint,
-              };
-            } else if (endpoint.includes('/r/') && endpoint.includes('/api/multi/')) {
-              // For subreddit operations on feeds
-              proxyUrl = `/api/reddit/feed-ops`;
-              options.headers = {
-                ...options.headers,
-                'X-Reddit-Endpoint': endpoint,
-              };
-            } else if (endpoint.includes('/user/') && endpoint.includes('/m/') && endpoint.includes('/r/')) {
-              // For adding/removing subreddits to/from custom feeds
-              proxyUrl = `/api/reddit/feed-ops`;
-              options.headers = {
-                ...options.headers,
-                'X-Reddit-Endpoint': endpoint,
-              };
-            } else if (endpoint.startsWith('/api/multi/user/') && endpoint.includes('/r/')) {
-              // For adding/removing subreddits with full path
-              proxyUrl = `/api/reddit/feed-ops`;
-              options.headers = {
-                ...options.headers,
-                'X-Reddit-Endpoint': endpoint,
-              };
-            } else {
-              // For other endpoints, we'll need to create more proxy routes
-              console.warn('No proxy route for endpoint:', endpoint);
-              throw new Error(`No proxy route configured for ${endpoint}`);
-            }
-            
-            const response = await fetch(proxyUrl, options);
-            
-            if (!response.ok) {
-              const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-              throw new Error(error.message || error.error || `Request failed with status ${response.status}`);
-            }
-            
-            const data = await response.json();
-            resolve(data);
+
+          // Route all requests through server-side proxy
+          let proxyUrl = '';
+
+          // Map Reddit endpoints to our proxy routes
+          if (endpoint.includes('/subreddits/mine/subscriber')) {
+            const params = endpoint.split('?')[1] || '';
+            proxyUrl = `/api/reddit/subreddits${params ? '?' + params : ''}`;
+          } else if (endpoint === '/api/multi/mine') {
+            proxyUrl = '/api/reddit/feeds';
+          } else if (endpoint === '/api/multi') {
+            proxyUrl = '/api/reddit/feeds';
+          } else if (endpoint === '/api/v1/me') {
+            proxyUrl = '/api/reddit/me';
+          } else if (endpoint.startsWith('/api/multi/')) {
+            proxyUrl = `/api/reddit/feed-ops`;
+            options.headers = {
+              ...options.headers,
+              'X-Reddit-Endpoint': endpoint,
+            };
+          } else if (endpoint.includes('/r/') && endpoint.includes('/api/multi/')) {
+            proxyUrl = `/api/reddit/feed-ops`;
+            options.headers = {
+              ...options.headers,
+              'X-Reddit-Endpoint': endpoint,
+            };
+          } else if (endpoint.includes('/user/') && endpoint.includes('/m/') && endpoint.includes('/r/')) {
+            proxyUrl = `/api/reddit/feed-ops`;
+            options.headers = {
+              ...options.headers,
+              'X-Reddit-Endpoint': endpoint,
+            };
+          } else if (endpoint.startsWith('/api/multi/user/') && endpoint.includes('/r/')) {
+            proxyUrl = `/api/reddit/feed-ops`;
+            options.headers = {
+              ...options.headers,
+              'X-Reddit-Endpoint': endpoint,
+            };
           } else {
-            // Server-side direct request
-            const accessToken = await this.auth.ensureValidToken();
-            if (!accessToken) {
-              throw new Error('No valid access token available');
-            }
-
-            const response = await fetch(`${REDDIT_API_BASE}${endpoint}`, {
-              ...options,
-              headers: {
-                ...options.headers,
-                Authorization: `Bearer ${accessToken}`,
-                'User-Agent': 'CustomFeedManager/1.0.0',
-              },
-            });
-
-            this.updateRateLimitInfo(response);
-
-            if (!response.ok) {
-              const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-              throw new Error(error.message || error.error || `Request failed with status ${response.status}`);
-            }
-
-            const data = await response.json();
-            resolve(data);
+            console.warn('No proxy route for endpoint:', endpoint);
+            throw new Error(`No proxy route configured for ${endpoint}`);
           }
+
+          const response = await fetch(proxyUrl, options);
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(error.message || error.error || `Request failed with status ${response.status}`);
+          }
+
+          const data = await response.json();
+          resolve(data);
         } catch (error) {
           reject(error);
         }
@@ -165,16 +125,6 @@ export class RedditAPI {
       this.rateLimitInfo.remaining = RATE_LIMIT_PER_MINUTE;
       this.rateLimitInfo.used = 0;
     }
-  }
-
-  private updateRateLimitInfo(response: Response): void {
-    const remaining = response.headers.get('x-ratelimit-remaining');
-    const reset = response.headers.get('x-ratelimit-reset');
-    const used = response.headers.get('x-ratelimit-used');
-
-    if (remaining) this.rateLimitInfo.remaining = parseInt(remaining);
-    if (reset) this.rateLimitInfo.reset = parseInt(reset) * 1000;
-    if (used) this.rateLimitInfo.used = parseInt(used);
   }
 
   private delay(ms: number): Promise<void> {

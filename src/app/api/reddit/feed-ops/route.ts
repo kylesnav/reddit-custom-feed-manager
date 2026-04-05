@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { getServerTokens } from '@/lib/auth/server-auth';
 
 const REDDIT_API_BASE = 'https://oauth.reddit.com';
 
@@ -18,18 +18,15 @@ export async function DELETE(request: NextRequest) {
 
 async function handleFeedOperation(request: NextRequest, method: string) {
   try {
-    const cookieStore = cookies();
-    const tokensCookie = cookieStore.get('reddit_tokens');
-    
-    if (!tokensCookie) {
+    const tokens = await getServerTokens();
+
+    if (!tokens) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    const tokens = JSON.parse(tokensCookie.value);
-    
     // Get the Reddit endpoint from the request headers or body
     const endpoint = request.headers.get('X-Reddit-Endpoint');
     if (!endpoint) {
@@ -38,7 +35,7 @@ async function handleFeedOperation(request: NextRequest, method: string) {
         { status: 400 }
       );
     }
-    
+
     let body = undefined;
     if (method !== 'DELETE') {
       try {
@@ -47,11 +44,11 @@ async function handleFeedOperation(request: NextRequest, method: string) {
         // No body is okay for some operations
       }
     }
-    
+
     // Determine if we need form-encoded or JSON
     let requestBody = undefined;
     let contentType = undefined;
-    
+
     if (body && method !== 'DELETE') {
       // For adding subreddits to feeds, Reddit expects form-encoded data
       if (endpoint.includes('/r/') && method === 'PUT') {
@@ -66,7 +63,7 @@ async function handleFeedOperation(request: NextRequest, method: string) {
         contentType = 'application/json';
       }
     }
-    
+
     // Make the request to Reddit API from the server
     const response = await fetch(`${REDDIT_API_BASE}${endpoint}`, {
       method,
@@ -92,7 +89,7 @@ async function handleFeedOperation(request: NextRequest, method: string) {
     if (!text) {
       return NextResponse.json({ success: true });
     }
-    
+
     try {
       const data = JSON.parse(text);
       return NextResponse.json(data);
