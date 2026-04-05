@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     // Set the tokens cookie properly on the server side
     const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard`);
     response.cookies.set('reddit_tokens', JSON.stringify(tokens), {
-      httpOnly: false, // Allow client-side access
+      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60, // 7 days

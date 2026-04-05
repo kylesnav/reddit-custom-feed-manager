@@ -1,23 +1,32 @@
 import { NextResponse } from 'next/server';
-import { RedditAuth } from '@/lib/auth/reddit-auth';
+import { getServerTokens, clearServerTokens } from '@/lib/auth/server-auth';
 
 export async function POST() {
   try {
-    const auth = RedditAuth.getInstance();
-    const tokens = auth.getStoredTokens();
+    const tokens = await getServerTokens();
 
     if (tokens?.access_token) {
-      await auth.revokeToken(tokens.access_token);
+      const clientId = process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID || '';
+
+      await fetch('https://www.reddit.com/api/v1/revoke_token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Basic ${Buffer.from(`${clientId}:`).toString('base64')}`,
+        },
+        body: new URLSearchParams({
+          token: tokens.access_token,
+          token_type_hint: 'access_token',
+        }).toString(),
+      });
     }
 
-    auth.clearTokens();
+    clearServerTokens();
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Logout error:', error);
-    return NextResponse.json(
-      { error: 'Logout failed' },
-      { status: 500 }
-    );
+    clearServerTokens();
+    return NextResponse.json({ success: true });
   }
 }

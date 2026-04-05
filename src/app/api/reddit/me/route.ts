@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { getServerTokens } from '@/lib/auth/server-auth';
 
 const REDDIT_API_BASE = 'https://oauth.reddit.com';
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = cookies();
-    const tokensCookie = cookieStore.get('reddit_tokens');
-    
-    if (!tokensCookie) {
+    const tokens = await getServerTokens();
+
+    if (!tokens) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    const tokens = JSON.parse(tokensCookie.value);
-    
     // Make the request to Reddit API from the server
     const response = await fetch(`${REDDIT_API_BASE}/api/v1/me`, {
       headers: {
